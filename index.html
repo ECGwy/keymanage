@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#34d399">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="密码管理">
+  <meta name="description" content="安全存储密码、银行卡和地址信息，所有数据本地加密">
+  <meta name="application-name" content="密码管理器">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; script-src 'self'; connect-src 'self'">
+  <title>密码管理器 - 安全存储您的重要信息</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192x192.png">
+</head>
+<body>
+  <!-- 登录页面 -->
+  <div id="login-page" class="page">
+    <div class="login-container">
+      <div class="login-card">
+        <div class="login-icon">🔐</div>
+        <h1 class="login-title">密码管理器</h1>
+        <p class="login-subtitle" id="login-subtitle">设置您的主密码</p>
+        
+        <div class="login-form">
+          <div class="form-group">
+            <input type="password" id="master-password" placeholder="请输入主密码" autocomplete="off">
+          </div>
+          <div class="form-group" id="confirm-password-group" style="display: none;">
+            <input type="password" id="confirm-password" placeholder="请再次输入主密码" autocomplete="off">
+          </div>
+          <div class="login-warning" id="login-warning" style="display: none;">
+            <span class="warning-icon">⚠️</span>
+            <span id="warning-text">请牢记主密码，遗失将无法找回数据！</span>
+          </div>
+          <div class="login-error" id="login-error" style="display: none;"></div>
+          <button class="btn btn-primary btn-block" id="login-btn">
+            <span id="login-btn-text">设置主密码</span>
+          </button>
+          <button type="button" id="login-import-btn" style="display:none; margin-top:14px; background:none; border:none; color:#34d399; font-size:14px; cursor:pointer; text-decoration:underline;">📥 导入已有备份</button>
+        </div>
+
+        <div class="login-hint">
+          <p>🔒 所有数据均在本地加密存储</p>
+          <p>☁️ 不上传任何服务器</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主页面 -->
+  <div id="main-page" class="page" style="display: none;">
+    <!-- 顶部导航 -->
+    <header class="top-bar">
+      <div class="top-bar-left">
+        <span class="logo-icon">🔐</span>
+        <span class="logo-text">密码管理器</span>
+      </div>
+      <div class="top-bar-center">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="搜索密码...">
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <button class="btn-icon" id="add-btn" title="添加密码">
+          <span>➕</span>
+        </button>
+        <button class="btn-icon" id="settings-btn" title="设置">
+          <span>⚙️</span>
+        </button>
+        <button class="btn-icon" id="lock-btn" title="锁定">
+          <span>🔒</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="main-container">
+      <!-- 侧边栏 - 分类 -->
+      <aside class="sidebar">
+        <div class="sidebar-title">分类</div>
+        <ul class="category-list" id="category-list">
+          <!-- 分类列表动态生成 -->
+        </ul>
+      </aside>
+
+      <!-- 主内容区 -->
+      <main class="content">
+        <div class="content-header">
+          <h2 id="current-category-title">全部密码</h2>
+          <span class="count-badge" id="entry-count">0 条</span>
+        </div>
+        
+        <div class="password-grid" id="password-grid">
+          <!-- 密码卡片动态生成 -->
+        </div>
+
+        <div class="empty-state" id="empty-state" style="display: none;">
+          <div class="empty-icon">📭</div>
+          <p class="empty-title">还没有密码记录</p>
+          <p class="empty-desc">点击右上角「➕」添加第一条密码</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 条目编辑弹窗 -->
+  <div class="modal" id="entry-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="entry-modal-title">添加条目</h3>
+        <button class="modal-close" id="entry-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="entry-form">
+          <input type="hidden" id="entry-id">
+          
+          <div class="form-group">
+            <label>类型</label>
+            <div class="type-selector" id="type-selector">
+              <div class="type-option active" data-type="password">
+                <span class="type-icon">🔑</span>
+                <span class="type-name">密码信息</span>
+              </div>
+              <div class="type-option" data-type="bank">
+                <span class="type-icon">💳</span>
+                <span class="type-name">银行卡信息</span>
+              </div>
+              <div class="type-option" data-type="bill">
+                <span class="type-icon">📄</span>
+                <span class="type-name">账单信息</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 通用：标题 -->
+          <div class="form-group">
+            <label>标题</label>
+            <input type="text" id="entry-title" placeholder="例如：微信、招商银行" required>
+          </div>
+          
+          <!-- 密码信息表单 -->
+          <div id="password-fields">
+            <div class="form-group">
+              <label>账号/用户名</label>
+              <input type="text" id="entry-username" placeholder="请输入账号">
+            </div>
+            <div class="form-group">
+              <label>密码</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="entry-password" placeholder="请输入密码" autocomplete="off">
+                <button type="button" class="password-toggle" id="toggle-password">👁️</button>
+                <button type="button" class="password-generate-btn" id="generate-password-btn">生成</button>
+              </div>
+              <div class="password-options" id="password-options" style="display: none;">
+                <div class="password-length">
+                  <label>长度: <span id="password-length-val">16</span></label>
+                  <input type="range" id="password-length" min="8" max="32" value="16">
+                </div>
+                <div class="checkbox-group">
+                  <label><input type="checkbox" id="opt-uppercase" checked> 大写字母</label>
+                  <label><input type="checkbox" id="opt-lowercase" checked> 小写字母</label>
+                  <label><input type="checkbox" id="opt-numbers" checked> 数字</label>
+                  <label><input type="checkbox" id="opt-symbols" checked> 符号</label>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>网址</label>
+              <input type="url" id="entry-url" placeholder="https://...">
+            </div>
+          </div>
+          
+          <!-- 银行卡信息表单 -->
+          <div id="bank-fields" style="display: none;">
+            <div class="form-group">
+              <label>持卡人姓名</label>
+              <input type="text" id="bank-holder" placeholder="请输入持卡人姓名">
+            </div>
+            <div class="form-group">
+              <label>银行卡号</label>
+              <input type="text" id="bank-number" placeholder="请输入银行卡号">
+            </div>
+            <div class="form-group">
+              <label>银行名称</label>
+              <input type="text" id="bank-name" placeholder="例如：招商银行">
+            </div>
+            <div class="form-group">
+              <label>取款密码</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="bank-pin" placeholder="请输入取款密码" autocomplete="off">
+                <button type="button" class="password-toggle" data-target="bank-pin">👁️</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>CVV / 安全码</label>
+              <div class="password-input-wrapper">
+                <input type="password" id="bank-cvv" placeholder="信用卡安全码" autocomplete="off">
+                <button type="button" class="password-toggle" data-target="bank-cvv">👁️</button>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>有效期</label>
+                <input type="text" id="bank-expiry" placeholder="MM/YY">
+              </div>
+              <div class="form-group">
+                <label>开户银行</label>
+                <input type="text" id="bank-branch" placeholder="开户支行">
+              </div>
+            </div>
+          </div>
+          
+          <!-- 账单地址信息表单 -->
+          <div id="bill-fields" style="display: none;">
+            <div class="form-row">
+              <div class="form-group">
+                <label>姓</label>
+                <input type="text" id="addr-lastname" placeholder="姓">
+              </div>
+              <div class="form-group">
+                <label>名</label>
+                <input type="text" id="addr-firstname" placeholder="名">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>性别</label>
+                <select id="addr-gender">
+                  <option value="">请选择</option>
+                  <option value="male">男</option>
+                  <option value="female">女</option>
+                  <option value="other">其他</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>年龄</label>
+                <input type="number" id="addr-age" placeholder="年龄" min="0">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>电话</label>
+              <input type="tel" id="addr-phone" placeholder="电话号码">
+            </div>
+            <div class="form-group">
+              <label>国家</label>
+              <input type="text" id="addr-country" placeholder="国家">
+            </div>
+            <div class="form-group">
+              <label>地址第一行</label>
+              <input type="text" id="addr-line1" placeholder="街道、门牌号等">
+            </div>
+            <div class="form-group">
+              <label>地址第二行</label>
+              <input type="text" id="addr-line2" placeholder="公寓、套房等（选填）">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>城市</label>
+                <input type="text" id="addr-city" placeholder="城市">
+              </div>
+              <div class="form-group">
+                <label>州/省/地区</label>
+                <input type="text" id="addr-state" placeholder="省/州/地区">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>邮政编码</label>
+              <input type="text" id="addr-zip" placeholder="邮政编码">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>备注</label>
+            <textarea id="entry-notes" rows="3" placeholder="添加备注信息..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="delete-entry-btn" style="display: none; color: #ef4444; border-color: #fecaca;">删除</button>
+        <div class="footer-actions">
+          <button class="btn btn-outline" id="entry-cancel-btn">取消</button>
+          <button class="btn btn-primary" id="entry-save-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分类编辑弹窗 -->
+  <div class="modal" id="category-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h3 id="category-modal-title">新建分类</h3>
+        <button class="modal-close" id="category-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>分类名称</label>
+          <input type="text" id="category-name" placeholder="请输入分类名称">
+        </div>
+        <div class="form-group">
+          <label>图标</label>
+          <div class="icon-picker" id="icon-picker">
+            <span class="icon-option active">👤</span>
+            <span class="icon-option">💼</span>
+            <span class="icon-option">🛒</span>
+            <span class="icon-option">🎮</span>
+            <span class="icon-option">📧</span>
+            <span class="icon-option">💳</span>
+            <span class="icon-option">📱</span>
+            <span class="icon-option">🏠</span>
+            <span class="icon-option">🔑</span>
+            <span class="icon-option">📝</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>颜色</label>
+          <div class="color-picker" id="color-picker">
+            <span class="color-option active" style="background: #34d399;" data-color="#34d399"></span>
+            <span class="color-option" style="background: #60a5fa;" data-color="#60a5fa"></span>
+            <span class="color-option" style="background: #f472b6;" data-color="#f472b6"></span>
+            <span class="color-option" style="background: #fbbf24;" data-color="#fbbf24"></span>
+            <span class="color-option" style="background: #a78bfa;" data-color="#a78bfa"></span>
+            <span class="color-option" style="background: #fb923c;" data-color="#fb923c"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="delete-category-btn" style="display: none; color: #ef4444; border-color: #fecaca;">删除分类</button>
+        <div class="footer-actions">
+          <button class="btn btn-outline" id="category-cancel-btn">取消</button>
+          <button class="btn btn-primary" id="category-save-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div class="modal" id="settings-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>设置</h3>
+        <button class="modal-close" id="settings-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h4>数据备份</h4>
+          <div class="settings-item">
+            <div class="settings-info">
+              <p class="settings-title">导出备份</p>
+              <p class="settings-desc">将加密后的数据导出为 JSON 文件</p>
+            </div>
+            <button class="btn btn-outline" id="export-btn">导出</button>
+          </div>
+          <div class="settings-item">
+            <div class="settings-info">
+              <p class="settings-title">导入备份</p>
+              <p class="settings-desc">从备份文件恢复数据</p>
+            </div>
+            <button class="btn btn-outline" id="import-btn">导入</button>
+            <input type="file" id="import-file" accept=".json" style="display: none;">
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h4>安全</h4>
+          <div class="settings-item">
+            <div class="settings-info">
+              <p class="settings-title">修改主密码</p>
+              <p class="settings-desc">更改解锁密码</p>
+            </div>
+            <button class="btn btn-outline" id="change-password-btn">修改</button>
+          </div>
+        </div>
+        
+        <div class="settings-section danger-section">
+          <h4>危险操作</h4>
+          <div class="settings-item">
+            <div class="settings-info">
+              <p class="settings-title">清空所有数据</p>
+              <p class="settings-desc">删除所有密码，此操作不可恢复</p>
+            </div>
+            <button class="btn btn-danger" id="clear-data-btn">清空数据</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 修改主密码弹窗 -->
+  <div class="modal" id="changepw-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h3>修改主密码</h3>
+        <button class="modal-close" id="changepw-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>当前主密码</label>
+          <input type="password" id="old-master-password" placeholder="请输入当前主密码" autocomplete="current-password">
+        </div>
+        <div class="form-group">
+          <label>新主密码</label>
+          <input type="password" id="new-master-password" placeholder="请输入新主密码" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label>确认新主密码</label>
+          <input type="password" id="new-confirm-password" placeholder="请再次输入新主密码" autocomplete="new-password">
+        </div>
+        <div class="form-error" id="changepw-error" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="footer-actions">
+          <button class="btn btn-outline" id="changepw-cancel-btn">取消</button>
+          <button class="btn btn-primary" id="changepw-save-btn">确认修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/crypto.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/sw-register.js"></script>
+</body>
+</html>

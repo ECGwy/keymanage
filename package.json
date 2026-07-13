@@ -1,0 +1,17 @@
+{
+  "name": "password-manager",
+  "version": "1.0.0",
+  "description": "安全存储密码、银行卡和地址信息，所有数据本地加密",
+  "scripts": {
+    "start": "npx serve . -l 8080",
+    "sync:android": "npx cap sync android",
+    "open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}
